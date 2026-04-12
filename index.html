@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocVault | Cloud Document Manager</title>
+    <meta name="description" content="DocVault — personal document manager powered by Hugging Face Datasets.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Hidden file input -->
+    <input type="file" id="fileInput" multiple style="display:none">
+
+    <!-- Toast container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Upload / Action Progress -->
+    <div id="uploadProgress" class="upload-progress">
+        <div class="upload-progress-inner">
+            <div class="spinner-sm"></div>
+            <span id="progressText">Working...</span>
+        </div>
+    </div>
+
+    <div class="app-container">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <i class="ph-fill ph-safe logo-icon"></i>
+                <h1 class="logo-text">DocVault</h1>
+            </div>
+
+            <div class="new-btn-wrapper">
+                <button class="btn-primary new-btn" id="newBtn">
+                    <i class="ph-bold ph-plus"></i> New
+                </button>
+                <div class="new-dropdown" id="newDropdown">
+                    <button class="new-dropdown-item" id="createFolderBtn">
+                        <i class="ph-fill ph-folder-plus"></i> Create Folder
+                    </button>
+                    <button class="new-dropdown-item" id="uploadFileBtn">
+                        <i class="ph-fill ph-upload-simple"></i> Upload File
+                    </button>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" id="navMyFiles">
+                    <i class="ph-fill ph-folder"></i> My Files
+                </a>
+                <a href="#" class="nav-item" id="navRecent">
+                    <i class="ph-fill ph-clock-counter-clockwise"></i> Recent
+                </a>
+                <a href="#" class="nav-item" id="navStarred">
+                    <i class="ph-fill ph-star"></i> Starred
+                </a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="storage-dashboard">
+                    <div class="storage-header">
+                        <i class="ph-fill ph-database"></i>
+                        <span>Storage</span>
+                    </div>
+                    <div class="storage-progress">
+                        <div class="progress-fill" id="storageProgress" style="width: 0%"></div>
+                    </div>
+                    <p class="storage-text" id="storageUsageText">0 files • 0 MB used</p>
+                </div>
+                <div class="hf-badge">
+                    <span class="hf-emoji">🤗</span>
+                    <span>Powered by Hugging Face</span>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <i class="ph-bold ph-magnifying-glass"></i>
+                    <input type="text" id="searchInput" placeholder="Search files or folders...">
+                </div>
+                <div class="user-actions">
+                    <div class="avatar">U</div>
+                </div>
+            </header>
+
+            <div class="breadcrumbs" id="breadcrumbs">
+                <span class="breadcrumb-item active">My Files</span>
+            </div>
+
+            <div class="content-area" id="contentArea">
+                <div class="section-header">
+                    <h2>Folders</h2>
+                    <div class="view-toggles">
+                        <button class="icon-btn active" id="viewGrid" title="Grid"><i class="ph-fill ph-squares-four"></i></button>
+                        <button class="icon-btn" id="viewList" title="List"><i class="ph-fill ph-list-dashes"></i></button>
+                    </div>
+                </div>
+                <div class="grid-container" id="foldersContainer"></div>
+
+                <div class="section-header mt-8">
+                    <h2>Files</h2>
+                </div>
+                <div class="grid-container" id="filesContainer"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- =================== MODALS =================== -->
+
+    <!-- Create Folder -->
+    <div class="modal-overlay" id="createFolderModal">
+        <div class="modal glass-panel">
+            <button class="close-modal" id="closeNameModal"><i class="ph-bold ph-x"></i></button>
+            <h3><i class="ph-fill ph-folder-plus" style="color:var(--folder-color);margin-right:10px"></i>New Folder</h3>
+            <div class="input-group">
+                <input type="text" id="folderNameInput" placeholder="Enter folder name..." autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelFolderBtn">Cancel</button>
+                <button class="btn-primary" id="confirmFolderBtn">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal glass-panel" style="max-width:360px">
+            <button class="close-modal" id="closeDeleteModal"><i class="ph-bold ph-x"></i></button>
+            <div class="delete-icon-wrap"><i class="ph-fill ph-warning"></i></div>
+            <p style="text-align:center; margin-bottom:20px; font-size:15px; color:var(--text-main);">
+                Are you sure you want to delete <strong>this item</strong>?
+            </p>
+            <div class="modal-footer" style="justify-content:center;gap:16px">
+                <button class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                <button class="btn-danger" id="confirmDeleteBtn"><i class="ph-fill ph-trash"></i> Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Modal -->
+    <div class="modal-overlay" id="renameModal">
+        <div class="modal glass-panel" style="max-width:400px">
+            <button class="close-modal" id="closeRenameModal"><i class="ph-bold ph-x"></i></button>
+            <h3><i class="ph-fill ph-pencil-simple" style="color:var(--primary-color)"></i> Rename File</h3>
+            <div class="input-group">
+                <label class="input-label">New Name</label>
+                <input type="text" id="renameInput" placeholder="Enter new name..." autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelRenameBtn">Cancel</button>
+                <button class="btn-primary" id="confirmRenameBtn"><i class="ph-fill ph-check"></i> Rename</button>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Preview Modal -->
+    <div class="modal-overlay" id="previewModal">
+        <div class="modal glass-panel" style="max-width:900px; width:95%; height:85vh; display:flex; flex-direction:column; padding:0; overflow:hidden">
+            <div class="preview-header">
+                <div class="preview-title">
+                    <i class="ph-fill ph-file preview-icon"></i>
+                    <span id="previewFileName">filename.pdf</span>
+                </div>
+                <div style="display:flex; gap:12px">
+                    <button class="icon-btn" id="downloadFromPreview" title="Download"><i class="ph-bold ph-download-simple"></i></button>
+                    <button class="close-modal" id="closePreviewModal" style="position:static"><i class="ph-bold ph-x"></i></button>
+                </div>
+            </div>
+            <div class="preview-body" id="previewBody">
+                <div class="loading-state"><div class="spinner"></div><p>Loading preview...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

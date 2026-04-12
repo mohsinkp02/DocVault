@@ -1,0 +1,159 @@
+{
+  "info": {
+    "name": "DocVault API Collection",
+    "description": "Complete API endpoints for DocVault offline-first document storage system",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:5000/api/health",
+        "header": []
+      },
+      "response": []
+    },
+    {
+      "name": "Create Folder",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"folder_path\": \"Documents/Projects/MyProject\"}"
+        },
+        "url": "http://localhost:5000/api/create-folder"
+      }
+    },
+    {
+      "name": "Delete Folder",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"folder_path\": \"Documents/Projects/MyProject\", \"force\": true}"
+        },
+        "url": "http://localhost:5000/api/delete-folder"
+      }
+    },
+    {
+      "name": "Upload File",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "folder_path",
+              "value": "Documents",
+              "type": "text"
+            },
+            {
+              "key": "file",
+              "type": "file"
+            }
+          ]
+        },
+        "url": "http://localhost:5000/api/upload-file"
+      }
+    },
+    {
+      "name": "List Contents",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:5000/api/list?folder_path=Documents",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "list"],
+          "query": [
+            {
+              "key": "folder_path",
+              "value": "Documents"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Rename Item",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\"item_path\": \"Documents/OldName\", \"new_name\": \"NewName\"}"
+        },
+        "url": "http://localhost:5000/api/rename"
+      }
+    },
+    {
+      "name": "Storage Statistics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "url": "http://localhost:5000/api/storage-stats"
+      }
+    },
+    {
+      "name": "Download File",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-User-ID",
+            "value": "user123"
+          }
+        ],
+        "url": "http://localhost:5000/api/download/Documents/report.pdf"
+      }
+    }
+  ]
+}
