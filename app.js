@@ -1,7 +1,19 @@
 // DocVault — Offline-First Document Storage System
 // Uses local Flask backend for all operations
 
-const API_BASE = 'http://localhost:5000/api';
+// Determine API base URL based on environment
+const API_BASE = (() => {
+  const host = window.location.hostname;
+  const isLocal = ['localhost', '127.0.0.1'].includes(host);
+  
+  if (isLocal) {
+    return 'http://localhost:5000/api';
+  } else {
+    // For HF Spaces and other deployments, use root path
+    return '/api';
+  }
+})();
+
 const USER_ID = 'default_user';
 const DEFAULT_FOLDER = '';
 
