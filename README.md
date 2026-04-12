@@ -5,6 +5,7 @@ colorFrom: blue
 colorTo: purple
 sdk: static
 app_file: index.html
+pinned: false
 ---
 
 # DocVault - Offline-First Document Storage System
