@@ -1,3 +1,12 @@
+---
+title: DocVault App
+emoji: 📁
+colorFrom: blue
+colorTo: purple
+sdk: static
+app_file: index.html
+---
+
 # DocVault - Offline-First Document Storage System
 
 Complete offline-first document storage system built with **Python Flask** and local filesystem storage. No cloud dependencies, fully self-contained, and ready for future Hugging Face integration.
