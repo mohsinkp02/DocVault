@@ -4,7 +4,7 @@ const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 class HFService {
   constructor() {
-    this.apiBase = 'http://localhost:5000/api';
+    this.apiBase = '/api';
     this.cache = new Map();
     this.retryLimit = 3;
     this.retryDelay = 1000; // 1s start for exponential backoff

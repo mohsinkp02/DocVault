@@ -182,5 +182,6 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    logger.info(f"Starting DocVault on http://localhost:5000 (DEBUG: {DEBUG})")
-    app.run(debug=DEBUG, host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 7860))
+    logger.info(f"Starting DocVault on http://localhost:{port} (DEBUG: {DEBUG})")
+    app.run(debug=DEBUG, host='0.0.0.0', port=port)

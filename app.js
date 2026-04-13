@@ -1,7 +1,7 @@
 // DocVault — Offline-First Document Storage System
 // Uses local Flask backend for all operations
 
-const API_BASE = 'http://localhost:5000/api';
+const API_BASE = '/api';
 const USER_ID = 'default_user';
 const DEFAULT_FOLDER = '';
 
@@ -950,37 +950,26 @@ function setNavActive(nav) {
 }
 
 navMyFiles.addEventListener('click', (e) => {
-  console.log('navMyFiles clicked'); // Debug
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation();
-  currentBrowse = 'files'; 
-  currentPath = [];
+  currentBrowse = 'files'; currentPath = [];
   setNavActive(navMyFiles);
   fetchAndRender();
-  return false;
 });
 
 navRecent.addEventListener('click', (e) => {
-  console.log('navRecent clicked'); // Debug
   e.preventDefault();
-  e.stopPropagation();
-  e.stopImmediatePropagation();
   currentBrowse = 'recent';
   setNavActive(navRecent);
   renderRecentView();
-  return false;
 });
 
 navStarred.addEventListener('click', (e) => {
-  console.log('navStarred clicked'); // Debug
   e.preventDefault();
-  e.stopPropagation();
-  e.stopImmediatePropagation();
   currentBrowse = 'starred';
   setNavActive(navStarred);
   renderStarredView();
-  return false;
 });
 
 function renderRecentView() {
