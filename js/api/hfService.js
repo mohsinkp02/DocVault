@@ -56,7 +56,7 @@ class HFService {
     if (data && data.success) {
       if (data.files) {
         for (const item of data.files) {
-          if (!item.path.endsWith('/.gitkeep') && item.path !== '.gitkeep') {
+          if (!item.path.endsWith('/.gitkeep') && item.path !== '.gitkeep' && !item.path.endsWith('/gitkeep') && item.path !== 'gitkeep') {
             result.files.push({
               path: item.path,
               name: item.name,
