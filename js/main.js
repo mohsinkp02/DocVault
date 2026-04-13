@@ -238,7 +238,7 @@ class App {
       onDownload: (url, name) => this.downloadFile(url, name),
       onStar: (path) => this.state.toggleStar(path),
       onDelete: (path, name) => this.openDeleteModal(path, name),
-      getUrl: (path) => getFileUrl(this.hf.username, this.hf.dataset, path)
+      getUrl: (path) => getFileUrl(this.hf.apiBase, path)
     });
 
     this.updateActiveNavItem();
@@ -359,7 +359,7 @@ class App {
 
   openPreview(file) {
     this.state.addToRecent(file);
-    const url = getFileUrl(this.hf.username, this.hf.dataset, file.path);
+    const url = getFileUrl(this.hf.apiBase, file.path);
     const modal = document.getElementById('previewModal');
     const body = document.getElementById('previewBody');
     const title = document.getElementById('previewFileName');

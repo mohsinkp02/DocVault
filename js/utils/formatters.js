@@ -57,7 +57,7 @@ export function formatDate(timestamp) {
   return `${Math.floor(diffDays / 365)} years ago`;
 }
 
-export function getFileUrl(username, dataset, filePath) {
+export function getFileUrl(apiBase, filePath) {
   const encoded = filePath.split('/').map(encodeURIComponent).join('/');
-  return `https://huggingface.co/datasets/${encodeURIComponent(username)}/${encodeURIComponent(dataset)}/resolve/main/${encoded}`;
+  return `${apiBase}/download/${encoded}`;
 }
