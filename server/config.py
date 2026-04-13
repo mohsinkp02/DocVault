@@ -25,7 +25,7 @@ MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50MB max file size
 ALLOWED_EXTENSIONS = {
     'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'doc', 'docx', 
     'xls', 'xlsx', 'ppt', 'pptx', 'zip', 'rar', 'json', 'xml', 
-    'csv', 'md', 'py', 'js', 'html', 'css', 'yml', 'yaml'
+    'csv', 'md', 'py', 'js', 'html', 'css', 'yml', 'yaml', 'gitkeep'
 }
 
 # Security
