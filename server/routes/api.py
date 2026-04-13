@@ -111,7 +111,7 @@ def upload_file():
         user_id = get_user_id_from_request()
         folder_path = request.form.get('folder_path', '').strip()
         
-        if not folder_path:
+        if folder_path is None:
             return jsonify({"success": False, "error": "folder_path is required"}), 400
         
         if 'file' not in request.files:
