@@ -39,6 +39,7 @@ def create_app():
     def add_cache_headers(response):
         if response.content_type and ('text/html' in response.content_type or 
                                       'text/javascript' in response.content_type or
+                                      'application/javascript' in response.content_type or
                                       'text/css' in response.content_type):
             response.cache_control.max_age = 0
             response.cache_control.no_cache = True

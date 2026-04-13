@@ -38,29 +38,29 @@
             </div>
 
             <div class="new-btn-wrapper">
-                <button class="btn-primary new-btn" id="newBtn">
+                <button type="button" class="btn-primary new-btn" id="newBtn">
                     <i class="ph-bold ph-plus"></i> New
                 </button>
                 <div class="new-dropdown" id="newDropdown">
-                    <button class="new-dropdown-item" id="createFolderBtn">
+                    <button type="button" class="new-dropdown-item" id="createFolderBtn">
                         <i class="ph-fill ph-folder-plus"></i> Create Folder
                     </button>
-                    <button class="new-dropdown-item" id="uploadFileBtn">
+                    <button type="button" class="new-dropdown-item" id="uploadFileBtn">
                         <i class="ph-fill ph-upload-simple"></i> Upload File
                     </button>
                 </div>
             </div>
 
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" id="navMyFiles">
+                <button type="button" class="nav-item active" id="navMyFiles">
                     <i class="ph-fill ph-folder"></i> My Files
-                </a>
-                <a href="#" class="nav-item" id="navRecent">
+                </button>
+                <button type="button" class="nav-item" id="navRecent">
                     <i class="ph-fill ph-clock-counter-clockwise"></i> Recent
-                </a>
-                <a href="#" class="nav-item" id="navStarred">
+                </button>
+                <button type="button" class="nav-item" id="navStarred">
                     <i class="ph-fill ph-star"></i> Starred
-                </a>
+                </button>
             </nav>
 
             <div class="sidebar-bottom">
@@ -102,8 +102,8 @@
                 <div class="section-header">
                     <h2>Folders</h2>
                     <div class="view-toggles">
-                        <button class="icon-btn active" id="viewGrid" title="Grid"><i class="ph-fill ph-squares-four"></i></button>
-                        <button class="icon-btn" id="viewList" title="List"><i class="ph-fill ph-list-dashes"></i></button>
+                        <button type="button" class="icon-btn active" id="viewGrid" title="Grid"><i class="ph-fill ph-squares-four"></i></button>
+                        <button type="button" class="icon-btn" id="viewList" title="List"><i class="ph-fill ph-list-dashes"></i></button>
                     </div>
                 </div>
                 <div class="grid-container" id="foldersContainer"></div>
@@ -121,14 +121,14 @@
     <!-- Create Folder -->
     <div class="modal-overlay" id="createFolderModal">
         <div class="modal glass-panel">
-            <button class="close-modal" id="closeNameModal"><i class="ph-bold ph-x"></i></button>
+            <button type="button" class="close-modal" id="closeNameModal"><i class="ph-bold ph-x"></i></button>
             <h3><i class="ph-fill ph-folder-plus" style="color:var(--folder-color);margin-right:10px"></i>New Folder</h3>
             <div class="input-group">
                 <input type="text" id="folderNameInput" placeholder="Enter folder name..." autocomplete="off">
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" id="cancelFolderBtn">Cancel</button>
-                <button class="btn-primary" id="confirmFolderBtn">Create</button>
+                <button type="button" class="btn-secondary" id="cancelFolderBtn">Cancel</button>
+                <button type="button" class="btn-primary" id="confirmFolderBtn">Create</button>
             </div>
         </div>
     </div>
@@ -136,14 +136,14 @@
     <!-- Delete Confirmation -->
     <div class="modal-overlay" id="deleteModal">
         <div class="modal glass-panel" style="max-width:360px">
-            <button class="close-modal" id="closeDeleteModal"><i class="ph-bold ph-x"></i></button>
+            <button type="button" class="close-modal" id="closeDeleteModal"><i class="ph-bold ph-x"></i></button>
             <div class="delete-icon-wrap"><i class="ph-fill ph-warning"></i></div>
             <p style="text-align:center; margin-bottom:20px; font-size:15px; color:var(--text-main);">
                 Are you sure you want to delete <strong>this item</strong>?
             </p>
             <div class="modal-footer" style="justify-content:center;gap:16px">
-                <button class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
-                <button class="btn-danger" id="confirmDeleteBtn"><i class="ph-fill ph-trash"></i> Delete</button>
+                <button type="button" class="btn-secondary" id="cancelDeleteBtn">Cancel</button>
+                <button type="button" class="btn-danger" id="confirmDeleteBtn"><i class="ph-fill ph-trash"></i> Delete</button>
             </div>
         </div>
     </div>
@@ -151,15 +151,15 @@
     <!-- Rename Modal -->
     <div class="modal-overlay" id="renameModal">
         <div class="modal glass-panel" style="max-width:400px">
-            <button class="close-modal" id="closeRenameModal"><i class="ph-bold ph-x"></i></button>
+            <button type="button" class="close-modal" id="closeRenameModal"><i class="ph-bold ph-x"></i></button>
             <h3><i class="ph-fill ph-pencil-simple" style="color:var(--primary-color)"></i> Rename File</h3>
             <div class="input-group">
                 <label class="input-label">New Name</label>
                 <input type="text" id="renameInput" placeholder="Enter new name..." autocomplete="off">
             </div>
             <div class="modal-footer">
-                <button class="btn-secondary" id="cancelRenameBtn">Cancel</button>
-                <button class="btn-primary" id="confirmRenameBtn"><i class="ph-fill ph-check"></i> Rename</button>
+                <button type="button" class="btn-secondary" id="cancelRenameBtn">Cancel</button>
+                <button type="button" class="btn-primary" id="confirmRenameBtn"><i class="ph-fill ph-check"></i> Rename</button>
             </div>
         </div>
     </div>
@@ -175,8 +175,8 @@
                     <span id="previewFileName">filename.pdf</span>
                 </div>
                 <div style="display:flex; gap:12px">
-                    <button class="icon-btn" id="downloadFromPreview" title="Download"><i class="ph-bold ph-download-simple"></i></button>
-                    <button class="close-modal" id="closePreviewModal" style="position:static"><i class="ph-bold ph-x"></i></button>
+                    <button type="button" class="icon-btn" id="downloadFromPreview" title="Download"><i class="ph-bold ph-download-simple"></i></button>
+                    <button type="button" class="close-modal" id="closePreviewModal" style="position:static"><i class="ph-bold ph-x"></i></button>
                 </div>
             </div>
             <div class="preview-body" id="previewBody">
@@ -185,6 +185,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js?v=2"></script>
 </body>
 </html>

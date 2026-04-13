@@ -3,7 +3,9 @@ title: DocVault App
 emoji: 📁
 colorFrom: blue
 colorTo: purple
-sdk: docker
+sdk: static
+app_file: index.html
+pinned: false
 ---
 
 # DocVault - Offline-First Document Storage System

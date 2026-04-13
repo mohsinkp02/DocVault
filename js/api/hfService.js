@@ -37,34 +37,42 @@ class HFService {
     }
   }
 
-  async listFiles(path = '', recursive = false) {
-    const cacheKey = `list-${path}-${recursive}`;
+  async listFiles(path = '') {
+    const cacheKey = `list-${path}`;
     const cached = this.cache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
       return cached.data;
     }
 
-    const url = `${this.apiBase}/list?path=${encodeURIComponent(path)}&recursive=${recursive}`;
-    const res = await this.fetchWithRetry(url);
+    const queryPath = path ? `?folder_path=${encodeURIComponent(path)}` : '';
+    const url = `${this.apiBase}/list${queryPath}`;
+    
+    // Add X-User-ID header to match app.py expected requests
+    const res = await this.fetchWithRetry(url, { headers: { 'X-User-ID': 'default_user' } });
     const data = await res.json();
 
     const result = { files: [], folders: [] };
 
-    if (Array.isArray(data)) {
-      for (const item of data) {
-        if (item.type === 'file' && !item.path.endsWith('/.gitkeep') && item.path !== '.gitkeep') {
-          result.files.push({
-            path: item.path,
-            name: item.path.split('/').pop(),
-            size: item.size || 0,
-            type: 'file',
-            lastModified: item.lastModified
-          });
-        } else if (item.type === 'directory') {
+    if (data && data.success) {
+      if (data.files) {
+        for (const item of data.files) {
+          if (!item.path.endsWith('/.gitkeep') && item.path !== '.gitkeep') {
+            result.files.push({
+              path: item.path,
+              name: item.name,
+              size: item.size || 0,
+              type: 'file',
+              lastModified: item.modified_at
+            });
+          }
+        }
+      }
+      if (data.folders) {
+        for (const item of data.folders) {
           result.folders.push({
             path: item.path,
-            name: item.path.split('/').pop(),
-            type: 'directory'
+            name: item.name,
+            type: 'folder'
           });
         }
       }
@@ -75,17 +83,20 @@ class HFService {
   }
 
   async uploadFile(file, destPath) {
-    const base64Content = await this.fileToBase64(file);
-    const url = `${this.apiBase}/upload`;
+    const formData = new FormData();
+    const folderPath = destPath.includes('/') ? destPath.substring(0, destPath.lastIndexOf('/')) : '';
+    const filename = file instanceof File ? file.name : destPath.split('/').pop();
+    const fileBlob = file instanceof File ? file : new Blob([file.content || '']);
+    
+    formData.append('folder_path', folderPath);
+    formData.append('file', fileBlob, filename);
+
+    const url = `${this.apiBase}/upload-file`;
 
     const res = await this.fetchWithRetry(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        path: destPath,
-        content: base64Content,
-        summary: `Upload ${destPath.split('/').pop()}`
-      }),
+      headers: { 'X-User-ID': 'default_user' }, // Let browser set Content-Type with boundary
+      body: formData
     });
 
     this.clearCache();
@@ -93,11 +104,11 @@ class HFService {
   }
 
   async deleteFile(path) {
-    const url = `${this.apiBase}/delete`;
+    const url = `${this.apiBase}/delete-file`;
     await this.fetchWithRetry(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path }),
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': 'default_user' },
+      body: JSON.stringify({ file_path: path }),
     });
 
     this.clearCache();
@@ -108,22 +119,12 @@ class HFService {
     const url = `${this.apiBase}/delete-folder`;
     const res = await this.fetchWithRetry(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: folderPath }),
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': 'default_user' },
+      body: JSON.stringify({ folder_path: folderPath, force: true }),
     });
 
     this.clearCache();
     return await res.json();
-  }
-
-  async fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      const blob = file instanceof File ? file : file.content;
-      reader.readAsDataURL(blob);
-      reader.onload = () => resolve(reader.result.split(',')[1]);
-      reader.onerror = reject;
-    });
   }
 
   clearCache() {

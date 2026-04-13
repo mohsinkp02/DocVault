@@ -91,6 +91,8 @@ export class UIRenderer {
         <div class="item-meta">Folder</div>`;
 
       card.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
         if (e.target.closest('.card-menu')) return;
         onFolderClick(folder.name);
       };

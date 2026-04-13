@@ -1,19 +1,7 @@
 // DocVault — Offline-First Document Storage System
 // Uses local Flask backend for all operations
 
-// Determine API base URL based on environment
-const API_BASE = (() => {
-  const host = window.location.hostname;
-  const isLocal = ['localhost', '127.0.0.1'].includes(host);
-  
-  if (isLocal) {
-    return 'http://localhost:5000/api';
-  } else {
-    // For HF Spaces and other deployments, use root path
-    return '/api';
-  }
-})();
-
+const API_BASE = 'http://localhost:5000/api';
 const USER_ID = 'default_user';
 const DEFAULT_FOLDER = '';
 
@@ -36,17 +24,26 @@ async function apiFetch(endpoint, options = {}) {
 async function listFilesAPI(path = DEFAULT_FOLDER) {
   try {
     const queryPath = path ? `?folder_path=${encodeURIComponent(path)}` : '';
+    const url = `${API_BASE}/list${queryPath}`;
+    console.log('Fetching from URL:', url); // Debug
     const res = await apiFetch(`/list${queryPath}`);
     
+    console.log('API Response status:', res.status); // Debug
+    
     if (!res.ok) {
-      if (res.status === 404) return { files: [], folders: [] };
-      throw new Error(`Failed to list files: ${res.status}`);
+      if (res.status === 404) {
+        console.warn('Path not found, returning empty list'); // Debug
+        return { files: [], folders: [] };
+      }
+      throw new Error(`Failed to list files: ${res.status} ${res.statusText}`);
     }
     
     const data = await res.json();
+    console.log('API Data:', data); // Debug
+    
     if (!data.success) {
       console.error('API error:', data.error);
-      return { files: [], folders: [] };
+      throw new Error(data.error || 'API returned success: false');
     }
     
     const files = (data.files || []).map(f => ({
@@ -66,9 +63,11 @@ async function listFilesAPI(path = DEFAULT_FOLDER) {
       modified_at: f.modified_at
     }));
 
+    console.log('Parsed folders:', folders.length, 'files:', files.length); // Debug
     return { files, folders };
   } catch (err) {
     console.error('List files error:', err);
+    showToast(`Error loading files: ${err.message}`, 'error');
     return { files: [], folders: [] };
   }
 }
@@ -79,23 +78,32 @@ async function uploadFileAPI(file, destPath) {
     const fileBlob = file instanceof File ? file : file.content;
     const filename = file instanceof File ? file.name : (file.name || 'upload.bin');
     
+    console.log('Uploading file:', filename, 'to:', folderPath); // Debug
+    
     const formData = new FormData();
     formData.append('folder_path', folderPath);
     formData.append('file', fileBlob, filename);
     
-    const res = await fetch(`${API_BASE}/upload-file`, {
+    const url = `${API_BASE}/upload-file`;
+    console.log('Upload endpoint:', url); // Debug
+    
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'X-User-ID': USER_ID },
       body: formData
     });
     
+    console.log('Upload response status:', res.status); // Debug
+    
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || `Upload failed: ${res.status}`);
+      const errData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(errData.error || `Upload failed: ${res.status} ${res.statusText}`);
     }
     
     const data = await res.json();
-    if (!data.success) throw new Error(data.error);
+    console.log('Upload API response:', data); // Debug
+    
+    if (!data.success) throw new Error(data.error || 'Upload API returned success: false');
     
     return data;
   } catch (err) {
@@ -362,6 +370,7 @@ function showSkeletons(container, count = 6) {
 // ─── FETCH FILES ──────────────────────────────────────────
 async function fetchAndRender() {
   if (isFetching) {
+    console.warn('Already fetching, ignoring request');
     return;
   }
   isFetching = true;
@@ -372,11 +381,16 @@ async function fetchAndRender() {
   showSkeletons(filesContainer,   6);
   try {
     const prefix   = getFolderPath();
+    console.log('Fetching contents for path:', prefix); // Debug
     const pathSnapshot = JSON.stringify(currentPath); // Capture for safety check
     const { files, folders } = await listFilesAPI(prefix);
     
+    console.log('API returned:', { folders: folders.length, files: files.length }); // Debug
+    
     // SAFETY CHECK: Path may have changed due to user clicking elsewhere
     if (JSON.stringify(currentPath) !== pathSnapshot) {
+      console.log('Path changed during fetch'); // Debug
+      isFetching = false;
       return;
     }
     
@@ -504,26 +518,23 @@ function renderFolders(folders) {
         </div>
       </div>`;
 
-    // NAVIGATION HANDLER - Use a self-contained function to avoid closure issues
-    const handleFolderClick = (e) => {
+    // FIXED: Simplified folder click handler
+    card.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
       // Don't navigate if clicking on the actions menu
       if (e.target.closest('.folder-actions')) {
         return;
       }
 
-      // Stop all propagation for actual navigation clicks
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      
       // Navigate into the folder
-      currentPath.push(name);
-      addToRecent(folder.path, name, 'folder');
+      const folderName = folder.path.split('/').pop();
+      console.log('Navigating to folder:', folderName, 'Full path:', folder.path); // Debug
+      currentPath.push(folderName);
+      addToRecent(folder.path, folderName, 'folder');
       fetchAndRender();
-      return false;
-    };
-    
-    card.addEventListener('click', handleFolderClick, true); // Use capture phase
+    });
 
     // Attach menu functionality
     attachCardMenu(card, folder.path, 'folder');
@@ -860,7 +871,10 @@ function hideProgress() { uploadProgress.classList.remove('active'); }
 
 // ─── FILE INPUT ───────────────────────────────────────────
 fileInput.addEventListener('change', () => {
-  uploadFiles(fileInput.files);
+  console.log('File input changed, files:', fileInput.files.length); // Debug
+  if (fileInput.files && fileInput.files.length > 0) {
+    uploadFiles(fileInput.files);
+  }
   fileInput.value = '';
 });
 
@@ -877,9 +891,24 @@ createFolderBtn.addEventListener('click', () => {
   createFolderModal.classList.add('active');
   setTimeout(() => folderNameInput.focus(), 100);
 });
-uploadFileBtn.addEventListener('click', () => {
+uploadFileBtn.addEventListener('click', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log('Upload button clicked'); // Debug
   newDropdown.classList.remove('active');
-  fileInput.click();
+  // Use try-catch in case fileInput doesn't exist
+  try {
+    if (fileInput) {
+      fileInput.click();
+      console.log('fileInput.click() called'); // Debug
+    } else {
+      console.error('fileInput element not found');
+      showToast('Error: File input not available', 'error');
+    }
+  } catch (err) {
+    console.error('Error clicking file input:', err);
+    showToast('Error: Could not open file dialog', 'error');
+  }
 });
 
 // ─── CREATE FOLDER ────────────────────────────────────────
@@ -921,26 +950,37 @@ function setNavActive(nav) {
 }
 
 navMyFiles.addEventListener('click', (e) => {
+  console.log('navMyFiles clicked'); // Debug
   e.preventDefault();
   e.stopPropagation();
   e.stopImmediatePropagation();
-  currentBrowse = 'files'; currentPath = [];
+  currentBrowse = 'files'; 
+  currentPath = [];
   setNavActive(navMyFiles);
   fetchAndRender();
+  return false;
 });
 
 navRecent.addEventListener('click', (e) => {
+  console.log('navRecent clicked'); // Debug
   e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
   currentBrowse = 'recent';
   setNavActive(navRecent);
   renderRecentView();
+  return false;
 });
 
 navStarred.addEventListener('click', (e) => {
+  console.log('navStarred clicked'); // Debug
   e.preventDefault();
+  e.stopPropagation();
+  e.stopImmediatePropagation();
   currentBrowse = 'starred';
   setNavActive(navStarred);
   renderStarredView();
+  return false;
 });
 
 function renderRecentView() {
@@ -1080,6 +1120,16 @@ confirmRenameBtn.addEventListener('click', async () => {
 // ─── INIT ─────────────────────────────────────────────────
 // Initialize offline-first DocVault
 (function initApp() {
+  console.log('🚀 DocVault initializing...'); // Debug
+  console.log('API_BASE:', API_BASE); // Debug
+  console.log('USER_ID:', USER_ID); // Debug
+  console.log('DOM Elements check:', {
+    fileInput: !!fileInput,
+    uploadFileBtn: !!uploadFileBtn,
+    foldersContainer: !!foldersContainer,
+    filesContainer: !!filesContainer
+  }); // Debug
+  
   // Show welcome message
   showToast('🎉 Welcome to DocVault! Loading your files...', 'info');
   

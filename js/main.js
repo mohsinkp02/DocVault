@@ -1,4 +1,4 @@
-import { hfService } from './api/hfService.js';
+import { hfService } from './api/hfService.js?v=2';
 import { stateManager } from './state/stateManager.js';
 import { UIRenderer } from './ui/uiRenderer.js';
 import { getFileUrl, isImage, isPDF, isText } from './utils/formatters.js';
@@ -97,11 +97,15 @@ class App {
       e.stopPropagation();
       document.getElementById('newDropdown').classList.toggle('active');
     };
-    document.getElementById('uploadFileBtn').onclick = () => {
+    document.getElementById('uploadFileBtn').onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       document.getElementById('newDropdown').classList.remove('active');
       document.getElementById('fileInput').click();
     };
-    document.getElementById('createFolderBtn').onclick = () => {
+    document.getElementById('createFolderBtn').onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       document.getElementById('newDropdown').classList.remove('active');
       document.getElementById('createFolderModal').classList.add('active');
       document.getElementById('folderNameInput').value = '';
