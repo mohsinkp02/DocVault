@@ -211,7 +211,7 @@ def download_file(file_path):
         if not os.path.exists(safe_path) or not os.path.isfile(safe_path):
             return jsonify({"success": False, "error": "File not found"}), 404
         
-        return send_file(safe_path, as_attachment=True)
+        return send_file(safe_path, as_attachment=False)
     
     except Exception as e:
         logger.error(f"Error in download_file: {str(e)}")
