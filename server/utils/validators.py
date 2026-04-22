@@ -6,7 +6,7 @@ import re
 try:
     from .. import config
 except ImportError:
-    import config
+    import server.config as config
 
 class PathValidator:
     """Validates and sanitizes file paths to prevent vulnerabilities"""
@@ -22,22 +22,36 @@ class PathValidator:
     def is_valid_filename(filename: str) -> bool:
         """
         Check if filename contains only allowed characters.
-        Prevents path traversal attacks.
+        Prevents path traversal attacks and follows cross-platform naming rules.
         """
-        if not filename or len(filename) > 255:
+        if not filename or not isinstance(filename, str):
+            return False
+            
+        filename = filename.strip()
+        if not filename or len(filename) > 250: # Slightly under 255 for buffer
             return False
         
         # Check for path traversal attempts
-        if '..' in filename or filename.startswith('/') or filename.startswith('\\'):
+        if '..' in filename or '/' in filename or '\\' in filename:
+            return False
+            
+        # Reserved characters for Windows/Linux/Cloud safety
+        # < > : " / \ | ? * and control chars
+        invalid_chars = set('<>:"/\\|?*')
+        if any((c in invalid_chars or ord(c) < 32) for c in filename):
             return False
         
         # Check for reserved names (Windows)
-        reserved = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'LPT1', 'LPT2'}
-        if filename.upper() in reserved:
-            return False
+        reserved = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 
+                    'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 
+                    'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}
         
-        # Check characters
-        return all(c in config.VALID_FILENAME_CHARS for c in filename)
+        # Handle extensions in reserved check (e.g., CON.txt is invalid)
+        base_name = filename.split('.')[0].upper()
+        if base_name in reserved:
+            return False
+            
+        return True
 
     @staticmethod
     def is_valid_path(user_id: str, path: str) -> bool:
@@ -78,8 +92,9 @@ class PathValidator:
 
 def sanitize_filename(filename: str) -> str:
     """Sanitize filename by removing or replacing invalid characters"""
-    # Remove invalid characters
-    sanitized = ''.join(c if c in config.VALID_FILENAME_CHARS else '_' for c in filename)
+    if not filename: return "file"
+    # Replace characters that are invalid on Windows/Linux or could be used for traversal
+    sanitized = re.sub(r'[<>:"/\\|?*\x00-\x1F]', '_', filename)
     # Remove leading/trailing dots and spaces
     sanitized = sanitized.strip('. ')
     return sanitized if sanitized else "file"
@@ -95,6 +110,7 @@ def get_file_size(filepath: str) -> int:
 
 def format_file_size(size_bytes: int) -> str:
     """Format bytes to human-readable size"""
+    if size_bytes == 0: return "0 B"
     for unit in ['B', 'KB', 'MB', 'GB']:
         if size_bytes < 1024.0:
             return f"{size_bytes:.2f} {unit}"

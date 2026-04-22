@@ -9,9 +9,9 @@ try:
     from .routes.api import api_bp
     from .utils.logger import setup_logger
 except ImportError:
-    from config import SECRET_KEY, DEBUG, MAX_CONTENT_LENGTH
-    from routes.api import api_bp
-    from utils.logger import setup_logger
+    from server.config import SECRET_KEY, DEBUG, MAX_CONTENT_LENGTH
+    from server.routes.api import api_bp
+    from server.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -65,13 +65,21 @@ def create_app():
             return send_file(filepath)
         return jsonify({"error": "Not found"}), 404
     
+    @app.route('/v2-test', methods=['GET'])
+    def v2_test():
+        """Diagnostic endpoint to confirm API version 2.1 is live"""
+        return jsonify({
+            "status": "API VERSION 2.1 LIVE",
+            "root_dir": ROOT_DIR,
+            "root_contents": os.listdir(ROOT_DIR)
+        })
+
     @app.route('/', methods=['GET'])
     def index():
         """Serve index.html for root path"""
         index_path = os.path.join(ROOT_DIR, 'index.html')
         if os.path.exists(index_path):
-            with open(index_path, 'r', encoding='utf-8') as f:
-                return f.read()
+            return send_file(index_path)
         
         # Fallback to API documentation if index.html doesn't exist
         return jsonify({
@@ -181,6 +189,14 @@ def create_app():
 
 
 if __name__ == '__main__':
+    print("\n" + "="*40)
+    print("  DOCVAULT VERSION 2.1 BOOTING...")
+    print(f"  ROOT_DIR: {ROOT_DIR}")
+    try:
+        print("  FILES IN ROOT_DIR:", os.listdir(ROOT_DIR))
+    except Exception as e:
+        print(f"  ERROR LISTING ROOT_DIR: {e}")
+    print("="*40 + "\n")
     app = create_app()
     port = int(os.environ.get("PORT", 7860))
     logger.info(f"Starting DocVault on http://localhost:{port} (DEBUG: {DEBUG})")

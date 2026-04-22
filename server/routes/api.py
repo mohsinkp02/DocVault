@@ -10,10 +10,10 @@ try:
     from ..utils.logger import setup_logger
     from ..config import DEFAULT_USER_ID, ALLOWED_EXTENSIONS, STORAGE_MODE, HF_TOKEN
 except ImportError:
-    from storage.factory import get_storage
-    from utils.validators import PathValidator
-    from utils.logger import setup_logger
-    from config import DEFAULT_USER_ID, ALLOWED_EXTENSIONS, STORAGE_MODE, HF_TOKEN
+    from server.storage.factory import get_storage
+    from server.utils.validators import PathValidator
+    from server.utils.logger import setup_logger
+    from server.config import DEFAULT_USER_ID, ALLOWED_EXTENSIONS, STORAGE_MODE, HF_TOKEN
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 logger = setup_logger(__name__)
