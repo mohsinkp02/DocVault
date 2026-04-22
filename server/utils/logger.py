@@ -1,13 +1,10 @@
-"""Logger setup for DocVault"""
+"""Logger setup for DocVault."""
 
 import logging
 import logging.handlers
 import os
 
-try:
-    from ..config import LOG_DIR, LOG_FORMAT, LOG_LEVEL
-except ImportError:
-    from config import LOG_DIR, LOG_FORMAT, LOG_LEVEL
+from server.config import LOG_DIR, LOG_FORMAT, LOG_LEVEL
 
 def setup_logger(name: str) -> logging.Logger:
     """

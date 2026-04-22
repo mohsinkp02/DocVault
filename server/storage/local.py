@@ -1,19 +1,14 @@
-"""Local Storage Manager for DocVault"""
+"""Local storage manager retained only for explicit erroring."""
 
 import os
 import shutil
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from .interface import StorageInterface
-try:
-    from ..utils.validators import PathValidator, sanitize_filename, get_file_size, format_file_size
-    from ..utils.logger import setup_logger
-    from .. import config
-except ImportError:
-    from server.utils.validators import PathValidator, sanitize_filename, get_file_size, format_file_size
-    from server.utils.logger import setup_logger
-    import server.config as config
+from server.storage.interface import StorageInterface
+from server.utils.validators import PathValidator, sanitize_filename, get_file_size, format_file_size
+from server.utils.logger import setup_logger
+import server.config as config
 
 logger = setup_logger(__name__)
 

@@ -509,11 +509,8 @@ function renderFolders(folders) {
           <i class="ph-bold ph-dots-three-vertical"></i>
         </button>
         <div class="dropdown-menu">
-          <button class="dropdown-item" data-action="share-folder" data-path="${folder.path}">
-            <i class="ph-fill ph-share-network"></i> Share
-          </button>
-          <button class="dropdown-item danger" data-action="delete-folder" data-path="${folder.path}">
-            <i class="ph-fill ph-trash"></i> Delete
+          <button class="dropdown-item" data-action="rename" data-path="${folder.path}" data-name="${name}">
+            <i class="ph-fill ph-pencil-simple"></i> Rename
           </button>
         </div>
       </div>`;

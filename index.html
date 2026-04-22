@@ -81,6 +81,10 @@
                     <span class="hf-emoji">🤗</span>
                     <span>Powered by Hugging Face</span>
                 </div>
+                <button class="settings-btn" id="settingsBtn" title="Token Settings">
+                    <i class="ph-fill ph-gear"></i> Token Settings
+                </button>
+            </div>
 
             </div>
         </aside>
@@ -134,6 +138,23 @@
             <div class="modal-footer">
                 <button class="btn-secondary" id="cancelFolderBtn">Cancel</button>
                 <button class="btn-primary" id="confirmFolderBtn">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token Settings -->
+    <div class="modal-overlay" id="tokenModal">
+        <div class="modal glass-panel" style="max-width:400px">
+            <button class="close-modal" id="closeTokenModal"><i class="ph-bold ph-x"></i></button>
+            <h3><i class="ph-fill ph-key" style="color:var(--primary-color)"></i> Token Settings</h3>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">Configure your Hugging Face User ID and API settings.</p>
+            <div class="input-group">
+                <label class="input-label">User ID (X-User-ID)</label>
+                <input type="text" id="userIdInput" placeholder="default_user" autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelTokenBtn">Cancel</button>
+                <button class="btn-primary" id="saveTokenBtn"><i class="ph-fill ph-check"></i> Save Settings</button>
             </div>
         </div>
     </div>
@@ -204,7 +225,7 @@
     </div>
 
     <script>
-        window.__DOCVAULT_API_BASE__ = 'http://127.0.0.1:7860/api';
+        window.__DOCVAULT_API_BASE__ = '/api';
     </script>
     <script type="module" src="js/main.js?v=5"></script>
 </body>

@@ -1,12 +1,9 @@
-"""Utility functions for path validation and security"""
+"""Utility functions for path validation and security."""
 
 import os
 import re
 
-try:
-    from .. import config
-except ImportError:
-    import server.config as config
+import server.config as config
 
 class PathValidator:
     """Validates and sanitizes file paths to prevent vulnerabilities"""

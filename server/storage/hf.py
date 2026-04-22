@@ -1,20 +1,15 @@
-"""Hugging Face Hub Storage Manager for DocVault (Optimized)"""
+"""Hugging Face Hub Storage Manager for DocVault."""
 
 import os
 import time
 from datetime import datetime
-from typing import List, Dict, Any, Optional
-from huggingface_hub import HfApi, CommitOperationAdd, CommitOperationDelete, CommitOperationCopy
+from typing import List, Dict, Any
+from huggingface_hub import HfApi, CommitOperationDelete, CommitOperationCopy
 
-from .interface import StorageInterface
-try:
-    from ..utils.validators import PathValidator, sanitize_filename, format_file_size
-    from ..utils.logger import setup_logger
-    from .. import config
-except ImportError:
-    from server.utils.validators import PathValidator, sanitize_filename, format_file_size
-    from server.utils.logger import setup_logger
-    import server.config as config
+import server.config as config
+from server.storage.interface import StorageInterface
+from server.utils.validators import PathValidator, sanitize_filename
+from server.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -22,6 +17,7 @@ class HuggingFaceStorageManager(StorageInterface):
     """Manages file and folder operations in Hugging Face Hub (simulated folders)"""
 
     def __init__(self):
+        config.validate_runtime_configuration()
         self.api = HfApi(token=config.HF_TOKEN)
         self._ensure_repo_exists()
         
@@ -43,7 +39,7 @@ class HuggingFaceStorageManager(StorageInterface):
                     exist_ok=True
                 )
             except Exception as e:
-                logger.error(f"HF Repo Creation Error: {str(e)}")
+                raise RuntimeError(f"Unable to access or create HF repo {config.HF_REPO_ID}: {str(e)}") from e
 
     def _clear_cache(self):
         """Invalidate all caches on write"""
@@ -295,7 +291,7 @@ class HuggingFaceStorageManager(StorageInterface):
             operations = []
             if hf_old_path in all_files:
                 # rename single file
-                operations.append(CommitOperationCopy(src_path=hf_old_path, path_in_repo=hf_new_path))
+                operations.append(CommitOperationCopy(src_path_in_repo=hf_old_path, path_in_repo=hf_new_path))
                 operations.append(CommitOperationDelete(path_in_repo=hf_old_path))
             else:
                 # rename folder (move all prefixes)
@@ -306,7 +302,7 @@ class HuggingFaceStorageManager(StorageInterface):
                     if f.startswith(folder_old_prefix):
                         found = True
                         rel = f[len(folder_old_prefix):]
-                        operations.append(CommitOperationCopy(src_path=f, path_in_repo=folder_new_prefix + rel))
+                        operations.append(CommitOperationCopy(src_path_in_repo=f, path_in_repo=folder_new_prefix + rel))
                         operations.append(CommitOperationDelete(path_in_repo=f))
                 
                 if not found:
@@ -387,7 +383,7 @@ class HuggingFaceStorageManager(StorageInterface):
             
             # Using create_commit with CommitOperationCopy to restore without download/upload
             op = CommitOperationCopy(
-                src_path=hf_path,
+                src_path_in_repo=hf_path,
                 path_in_repo=dest_path,
                 src_revision=revision
             )

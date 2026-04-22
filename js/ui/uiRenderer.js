@@ -63,7 +63,7 @@ export class UIRenderer {
     });
   }
 
-  renderFolders(folders, onFolderClick, onDelete) {
+  renderFolders(folders, onFolderClick, onRename, onDelete) {
     this.containers.folders.innerHTML = '';
     if (!folders.length) return;
 
@@ -81,6 +81,9 @@ export class UIRenderer {
           <div class="card-menu">
             <button class="icon-btn card-menu-btn" title="More options"><i class="ph-bold ph-dots-three-vertical"></i></button>
             <div class="dropdown-menu">
+              <button class="dropdown-item" data-action="rename">
+                <i class="ph-fill ph-pencil-simple"></i> Rename
+              </button>
               <button class="dropdown-item danger" data-action="delete">
                 <i class="ph-fill ph-trash"></i> Delete
               </button>
@@ -97,9 +100,14 @@ export class UIRenderer {
         onFolderClick(folder.name);
       };
 
-      card.querySelector('.dropdown-item').onclick = (e) => {
+      card.querySelector('[data-action="rename"]').onclick = (e) => {
         e.stopPropagation();
-        onDelete(folder.path, folder.name);
+        if (onRename) onRename(folder.path, folder.name);
+      };
+
+      card.querySelector('[data-action="delete"]').onclick = (e) => {
+        e.stopPropagation();
+        if (onDelete) onDelete(folder.path, folder.name);
       };
 
       const menuBtn = card.querySelector('.card-menu-btn');
@@ -150,6 +158,8 @@ export class UIRenderer {
           <div class="quick-actions">
             <button class="quick-btn" data-action="preview" title="Preview"><i class="ph-fill ph-eye"></i></button>
             <button class="quick-btn" data-action="download" title="Download"><i class="ph-fill ph-download-simple"></i></button>
+            <button class="quick-btn" data-action="rename" title="Rename"><i class="ph-fill ph-pencil-simple"></i></button>
+            <button class="quick-btn" data-action="history" title="History"><i class="ph-fill ph-clock-counter-clockwise"></i></button>
           </div>`;
       } else {
         card.innerHTML = `
@@ -160,6 +170,8 @@ export class UIRenderer {
           </div>
           <div class="list-actions">
             <button class="icon-btn" data-action="star" title="${starred ? 'Unstar' : 'Star'}"><i class="ph-fill ph-star${starred ? '' : '-bold'}"></i></button>
+            <button class="icon-btn" data-action="rename" title="Rename"><i class="ph-fill ph-pencil-simple"></i></button>
+            <button class="icon-btn" data-action="history" title="History"><i class="ph-fill ph-clock-counter-clockwise"></i></button>
             <button class="icon-btn" data-action="download" title="Download"><i class="ph-fill ph-download-simple"></i></button>
             <button class="icon-btn" data-action="delete" title="Delete"><i class="ph-fill ph-trash"></i></button>
           </div>`;
@@ -177,8 +189,10 @@ export class UIRenderer {
         const action = btn.dataset.action;
         if (action === 'preview') actions.onPreview(file);
         else if (action === 'download') actions.onDownload(url, file.name);
+        else if (action === 'rename') actions.onRename(file.path, file.name);
         else if (action === 'star') actions.onStar(file.path);
         else if (action === 'delete') actions.onDelete(file.path, file.name);
+        else if (action === 'history') actions.onHistory(file.path, file.name);
       });
 
       this.containers.files.appendChild(card);
@@ -207,5 +221,54 @@ export class UIRenderer {
       el.className = 'skeleton skeleton-card';
       this.containers.files.appendChild(el);
     }
+  }
+
+  showHistoryModal(fileName) {
+    const modal = document.getElementById('historyModal');
+    const nameEl = document.getElementById('historyFileName');
+    const list = document.getElementById('historyList');
+
+    nameEl.textContent = fileName;
+    list.innerHTML = '<div class="loading-state-sm"><div class="spinner-sm"></div><p>Fetching history...</p></div>';
+    modal.classList.add('active');
+  }
+
+  renderHistory(history, onRestore) {
+    const list = document.getElementById('historyList');
+    if (!history.length) {
+      list.innerHTML = '<div class="empty-state-sm"><p>No version history found.</p></div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    history.forEach((commit, idx) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      
+      const date = new Date(commit.timestamp).toLocaleString();
+      const shortId = commit.id.substring(0, 7);
+
+      item.innerHTML = `
+        <div class="history-info">
+          <span class="history-commit-msg" title="${commit.message}">${commit.message}</span>
+          <span class="history-meta">${date} • ${shortId} by ${commit.author}</span>
+        </div>
+        <div class="history-actions">
+          ${idx === 0 ? '<span class="current-version-badge">Current</span>' : `
+            <button class="restore-btn copy" data-action="copy" title="Restore as a new file">Save as Copy</button>
+            <button class="restore-btn overwrite" data-action="overwrite" title="Overwrites current file!">Overwrite</button>
+          `}
+        </div>
+      `;
+
+      item.querySelectorAll('.restore-btn').forEach(btn => {
+        btn.onclick = () => {
+          const asCopy = btn.dataset.action === 'copy';
+          onRestore(commit.id, asCopy);
+        };
+      });
+
+      list.appendChild(item);
+    });
   }
 }

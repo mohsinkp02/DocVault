@@ -1,17 +1,12 @@
-"""DocVault - Offline-First Document Storage System"""
+"""DocVault application entrypoint."""
 
 from flask import Flask, jsonify, send_file, render_template_string
 from flask_cors import CORS
 import os
 
-try:
-    from .config import SECRET_KEY, DEBUG, MAX_CONTENT_LENGTH
-    from .routes.api import api_bp
-    from .utils.logger import setup_logger
-except ImportError:
-    from server.config import SECRET_KEY, DEBUG, MAX_CONTENT_LENGTH
-    from server.routes.api import api_bp
-    from server.utils.logger import setup_logger
+import server.config as config
+from server.routes.api import api_bp
+from server.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
 
@@ -21,11 +16,12 @@ ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 
 def create_app():
     """Create and configure Flask application"""
+    config.validate_runtime_configuration()
     app = Flask(__name__, static_folder=None)
     
     # Configuration
-    app.config['SECRET_KEY'] = SECRET_KEY
-    app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+    app.config['SECRET_KEY'] = config.SECRET_KEY
+    app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
     app.config['JSON_SORT_KEYS'] = False
     
     # Enable CORS for local development
@@ -53,7 +49,7 @@ def create_app():
     def request_entity_too_large(error):
         return jsonify({
             "success": False,
-            "error": f"File too large. Maximum size: {MAX_CONTENT_LENGTH / (1024 * 1024):.0f}MB"
+            "error": f"File too large. Maximum size: {config.MAX_CONTENT_LENGTH / (1024 * 1024):.0f}MB"
         }), 413
     
     # Serve static frontend files with no-cache headers
@@ -199,5 +195,5 @@ if __name__ == '__main__':
     print("="*40 + "\n")
     app = create_app()
     port = int(os.environ.get("PORT", 7860))
-    logger.info(f"Starting DocVault on http://localhost:{port} (DEBUG: {DEBUG})")
-    app.run(debug=DEBUG, host='0.0.0.0', port=port)
+    logger.info(f"Starting DocVault on http://localhost:{port} (DEBUG: {config.DEBUG})")
+    app.run(debug=config.DEBUG, host='0.0.0.0', port=port)

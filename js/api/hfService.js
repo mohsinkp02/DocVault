@@ -1,22 +1,59 @@
-// Production-grade API Client with Proxy Support, TTL Caching, and Retries
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
+// Enhanced HF Service with Versioning and Standardized Responses
+const CACHE_TTL = 60 * 1000; // 60 seconds (aligned with backend HF cache)
 
 class HFService {
   constructor() {
-    this.apiBase = '/api';
+    this.apiBase = null;
+    this.apiBasePromise = null;
     this.cache = new Map();
     this.retryLimit = 3;
-    this.retryDelay = 1000; // 1s start for exponential backoff
-
-    // These are used by getFileUrl() in main.js for building download/preview URLs
-    this.username = 'mohsin-devs';
-    this.dataset = 'docvault-storage';
-
-
+    this.retryDelay = 1000;
   }
 
+  getUserId() {
+    return localStorage.getItem('docvault_user_id') || 'default_user';
+  }
 
+  async getApiBase() {
+    if (this.apiBase) return this.apiBase;
+    if (this.apiBasePromise) return this.apiBasePromise;
+
+    this.apiBasePromise = (async () => {
+      const configuredBase = window.__DOCVAULT_API_BASE__;
+      if (configuredBase && typeof configuredBase === 'string') {
+        this.apiBase = configuredBase.replace(/\/$/, '');
+        return this.apiBase;
+      }
+
+      const { protocol, hostname, origin, port } = window.location;
+      const host = hostname || '127.0.0.1';
+      const candidates = [`${origin}/api`];
+
+      if (port !== '5000') candidates.push(`${protocol}//${host}:5000/api`);
+      if (port !== '7860') candidates.push(`${protocol}//${host}:7860/api`);
+
+      for (const candidate of candidates) {
+        try {
+          const response = await fetch(`${candidate}/health`, {
+            method: 'GET',
+            headers: { 'X-User-ID': this.getUserId() }
+          });
+
+          if (response.ok) {
+            this.apiBase = candidate;
+            return candidate;
+          }
+        } catch (err) {
+          // Try the next candidate quietly.
+        }
+      }
+
+      this.apiBase = '/api';
+      return this.apiBase;
+    })();
+
+    return this.apiBasePromise;
+  }
 
   async fetchWithRetry(url, options = {}, retries = this.retryLimit) {
     try {
@@ -45,36 +82,42 @@ class HFService {
     }
 
     const queryPath = path ? `?folder_path=${encodeURIComponent(path)}` : '';
-    const url = `${this.apiBase}/list${queryPath}`;
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/list${queryPath}`;
     
-    // Add X-User-ID header to match app.py expected requests
-    const res = await this.fetchWithRetry(url, { headers: { 'X-User-ID': 'default_user' } });
+    const res = await this.fetchWithRetry(url, { headers: { 'X-User-ID': this.getUserId() } });
     const data = await res.json();
 
     const result = { files: [], folders: [] };
 
-    if (data && data.success) {
-      if (data.files) {
-        for (const item of data.files) {
-          if (!item.path.endsWith('/.gitkeep') && item.path !== '.gitkeep' && !item.path.endsWith('/gitkeep') && item.path !== 'gitkeep') {
-            result.files.push({
-              path: item.path,
-              name: item.name,
-              size: item.size || 0,
-              type: 'file',
-              lastModified: item.modified_at
-            });
-          }
-        }
+    // Validate response structure
+    if (!data || typeof data !== 'object' || data.success !== true) {
+      console.warn('Invalid API response structure:', data);
+      this.cache.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
+    }
+
+    if (Array.isArray(data.files)) {
+      for (const item of data.files) {
+        result.files.push({
+          path: item.path || '',
+          name: item.name || 'unnamed',
+          size: item.size || 0,
+          type: 'file',
+          lastModified: item.modified_at,
+          storage: item.storage
+        });
       }
-      if (data.folders) {
-        for (const item of data.folders) {
-          result.folders.push({
-            path: item.path,
-            name: item.name,
-            type: 'folder'
-          });
-        }
+    }
+    
+    if (Array.isArray(data.folders)) {
+      for (const item of data.folders) {
+        result.folders.push({
+          path: item.path || '',
+          name: item.name || 'unnamed',
+          type: 'folder',
+          storage: item.storage
+        });
       }
     }
 
@@ -84,6 +127,7 @@ class HFService {
 
   async uploadFile(file, destPath) {
     const formData = new FormData();
+    // standardized folder path extraction
     const folderPath = destPath.includes('/') ? destPath.substring(0, destPath.lastIndexOf('/')) : '';
     const filename = file instanceof File ? file.name : destPath.split('/').pop();
     const fileBlob = file instanceof File ? file : new Blob([file.content || '']);
@@ -91,11 +135,12 @@ class HFService {
     formData.append('folder_path', folderPath);
     formData.append('file', fileBlob, filename);
 
-    const url = `${this.apiBase}/upload-file`;
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/upload-file`;
 
     const res = await this.fetchWithRetry(url, {
       method: 'POST',
-      headers: { 'X-User-ID': 'default_user' }, // Let browser set Content-Type with boundary
+      headers: { 'X-User-ID': this.getUserId() },
       body: formData
     });
 
@@ -103,24 +148,87 @@ class HFService {
     return await res.json();
   }
 
-  async deleteFile(path) {
-    const url = `${this.apiBase}/delete-file`;
-    await this.fetchWithRetry(url, {
+  async createFolder(folderPath) {
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/create-folder`;
+    const res = await this.fetchWithRetry(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-ID': 'default_user' },
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': this.getUserId() },
+      body: JSON.stringify({ folder_path: folderPath }),
+    });
+
+    this.clearCache();
+    return await res.json();
+  }
+
+  async deleteFile(path) {
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/delete-file`;
+    const res = await this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': this.getUserId() },
       body: JSON.stringify({ file_path: path }),
     });
 
     this.clearCache();
-    return true;
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to delete file');
+    }
+    return data;
   }
 
   async deleteFolder(folderPath) {
-    const url = `${this.apiBase}/delete-folder`;
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/delete-folder`;
     const res = await this.fetchWithRetry(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-User-ID': 'default_user' },
-      body: JSON.stringify({ folder_path: folderPath, force: true }),
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': this.getUserId() },
+      body: JSON.stringify({ folder_path: folderPath }),
+    });
+
+    this.clearCache();
+    const data = await res.json();
+    if (!data.success) {
+      throw new Error(data.error || 'Failed to delete folder');
+    }
+    return data;
+  }
+
+  async getHistory(path) {
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/history?path=${encodeURIComponent(path)}`;
+    const res = await this.fetchWithRetry(url, { headers: { 'X-User-ID': this.getUserId() } });
+    const data = await res.json();
+    
+    if (!data || !data.success) {
+      console.warn('Failed to get history:', data?.error || 'Unknown error');
+      return [];
+    }
+    
+    return Array.isArray(data.history) ? data.history : [];
+  }
+
+  async restoreVersion(path, revision, asCopy = false) {
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/restore`;
+    const res = await this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': this.getUserId() },
+      body: JSON.stringify({ path, revision, as_copy: asCopy }),
+    });
+
+    this.clearCache();
+    return await res.json();
+  }
+
+  async renameItem(itemPath, newName) {
+    const apiBase = await this.getApiBase();
+    const url = `${apiBase}/rename`;
+    const res = await this.fetchWithRetry(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-User-ID': this.getUserId() },
+      body: JSON.stringify({ item_path: itemPath, new_name: newName }),
     });
 
     this.clearCache();

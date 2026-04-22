@@ -21,5 +21,5 @@ RUN chmod -R 777 /app/data /app/logs
 # Expose port (default for HF Spaces)
 EXPOSE 7860
 
-# Run as a package so relative imports work in Hugging Face Spaces
-CMD ["python", "-m", "server.app"]
+# Run behind a production WSGI server on the Spaces port
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--factory", "server.app:create_app"]

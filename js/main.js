@@ -189,6 +189,27 @@ class App {
       const url = this.getPreviewUrl(this.currentPreviewFile.path, true);
       this.downloadFile(url, this.currentPreviewFile.name);
     };
+
+    // Token Settings
+    document.getElementById('settingsBtn').onclick = () => {
+      const currentId = localStorage.getItem('docvault_user_id') || 'default_user';
+      document.getElementById('userIdInput').value = currentId;
+      document.getElementById('tokenModal').classList.add('active');
+    };
+
+    document.getElementById('cancelTokenBtn').onclick = () => {
+      document.getElementById('tokenModal').classList.remove('active');
+    };
+
+    document.getElementById('saveTokenBtn').onclick = () => {
+      const newId = document.getElementById('userIdInput').value.trim();
+      if (newId) {
+        localStorage.setItem('docvault_user_id', newId);
+        this.ui.showToast('Settings saved', 'success');
+        document.getElementById('tokenModal').classList.remove('active');
+        this.fetchAndRender();
+      }
+    };
   }
 
   async fetchAndRender() {

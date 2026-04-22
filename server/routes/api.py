@@ -1,38 +1,33 @@
-"""API routes for DocVault"""
+"""API routes for DocVault."""
 
 from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context
 from werkzeug.utils import secure_filename
 import os
 
-try:
-    from ..storage.factory import get_storage
-    from ..utils.validators import PathValidator
-    from ..utils.logger import setup_logger
-    from ..config import DEFAULT_USER_ID, ALLOWED_EXTENSIONS, STORAGE_MODE, HF_TOKEN
-except ImportError:
-    from server.storage.factory import get_storage
-    from server.utils.validators import PathValidator
-    from server.utils.logger import setup_logger
-    from server.config import DEFAULT_USER_ID, ALLOWED_EXTENSIONS, STORAGE_MODE, HF_TOKEN
+import server.config as config
+from server.storage.factory import get_storage
+from server.utils.validators import PathValidator
+from server.utils.logger import setup_logger
 
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 logger = setup_logger(__name__)
 
 def get_user_id_from_request():
     """Extract user_id from request headers or use default"""
-    return request.headers.get('X-User-ID', DEFAULT_USER_ID)
+    return request.headers.get('X-User-ID', config.DEFAULT_USER_ID)
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
     if '.' not in filename:
         return False
     ext = filename.rsplit('.', 1)[1].lower()
-    return ext in ALLOWED_EXTENSIONS
+    return ext in config.ALLOWED_EXTENSIONS
 
 @api_bp.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({"status": "healthy", "service": "DocVault", "storage": STORAGE_MODE}), 200
+    config.validate_runtime_configuration()
+    return jsonify({"storage": "HF", "repo": config.HF_REPO_ID, "status": "ok"}), 200
 
 @api_bp.route('/create-folder', methods=['POST'])
 def create_folder():
@@ -113,6 +108,7 @@ def delete_file():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @api_bp.route('/upload-file', methods=['POST'])
+@api_bp.route('/upload', methods=['POST'])
 def upload_file():
     """Upload a file to a folder"""
     try:
@@ -132,7 +128,7 @@ def upload_file():
             logger.warning(f"[UPLOAD_FILE] FAIL | user={user_id} | file={file.filename} | reason=unsupported_extension")
             return jsonify({
                 "success": False,
-                "error": f"File type not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+                "error": f"File type not allowed. Allowed: {', '.join(config.ALLOWED_EXTENSIONS)}"
             }), 400
         
         logger.info(f"[UPLOAD_FILE] START | user={user_id} | file={file.filename} | folder={folder_path} | size={file.content_length or 0}")
@@ -238,8 +234,8 @@ def download_file(file_path):
             # (HF raw URLs serve Content-Disposition: attachment).
             try:
                 headers = {}
-                if HF_TOKEN:
-                    headers['Authorization'] = f'Bearer {HF_TOKEN}'
+                if config.HF_TOKEN:
+                    headers['Authorization'] = f'Bearer {config.HF_TOKEN}'
                 
                 hf_resp = req_lib.get(result, stream=True, timeout=30, headers=headers)
                 hf_resp.raise_for_status()
@@ -292,6 +288,14 @@ def download_file(file_path):
     except Exception as e:
         logger.error(f"Error in download_file: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
+
+@api_bp.route('/delete', methods=['POST'])
+def delete_item():
+    """Delete a file or folder via a unified endpoint."""
+    data = request.get_json() or {}
+    if data.get('folder_path') or data.get('is_folder'):
+        return delete_folder()
+    return delete_file()
 
 @api_bp.route('/history', methods=['GET'])
 def get_history():
