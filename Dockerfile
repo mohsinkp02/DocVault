@@ -22,4 +22,4 @@ RUN chmod -R 777 /app/data /app/logs
 EXPOSE 7860
 
 # Run behind a production WSGI server on the Spaces port
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "--factory", "server.app:create_app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "2", "server.app:create_app()"]
