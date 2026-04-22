@@ -1,4 +1,4 @@
-import { hfService } from './api/hfService.js?v=2';
+import { hfService } from './api/hfService.js?v=3';
 import { stateManager } from './state/stateManager.js';
 import { UIRenderer } from './ui/uiRenderer.js';
 import { getFileUrl, isImage, isPDF, isText } from './utils/formatters.js';
@@ -9,6 +9,7 @@ class App {
     this.state = stateManager;
     this.hf = hfService;
     this.pendingDelete = null;
+    this.pendingRename = null;
     this.cachedFolders = [];
     this.init();
   }
@@ -131,13 +132,39 @@ class App {
     document.getElementById('confirmDeleteBtn').onclick = () => this.confirmDelete();
     document.getElementById('cancelDeleteBtn').onclick = () => document.getElementById('deleteModal').classList.remove('active');
 
+    // Rename Modal
+    document.getElementById('confirmRenameBtn').onclick = () => this.renameItem();
+    document.getElementById('cancelRenameBtn').onclick = () => document.getElementById('renameModal').classList.remove('active');
+    document.getElementById('renameFromPreview').onclick = () => {
+      if (this.currentPreviewFile) this.openRenameModal(this.currentPreviewFile.path, this.currentPreviewFile.name);
+    };
 
-
-    // Click outside closes dropdown
+    // Enter on rename input
+    document.getElementById('renameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') this.renameItem();
+      if (e.key === 'Escape') document.getElementById('renameModal').classList.remove('active');
+    });
     document.addEventListener('click', () => {
       document.getElementById('newDropdown').classList.remove('active');
       // Close all dropdown menus
       document.querySelectorAll('.dropdown-menu.open').forEach(m => m.classList.remove('open'));
+    });
+
+    // Mobile Toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.querySelector('.sidebar');
+    if (menuToggle && sidebar) {
+      menuToggle.onclick = (e) => {
+        e.stopPropagation();
+        sidebar.classList.toggle('mobile-open');
+      };
+    }
+
+    // Close sidebar on navigation (mobile)
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        sidebar.classList.remove('mobile-open');
+      });
     });
 
     // Modals Close via X button
@@ -152,9 +179,16 @@ class App {
       overlay.addEventListener('click', (e) => {
         if (e.target === overlay) {
           overlay.classList.remove('active');
+          sidebar.classList.remove('mobile-open');
         }
       });
     });
+
+    document.getElementById('downloadFromPreview').onclick = () => {
+      if (!this.currentPreviewFile) return;
+      const url = this.getPreviewUrl(this.currentPreviewFile.path, true);
+      this.downloadFile(url, this.currentPreviewFile.name);
+    };
   }
 
   async fetchAndRender() {
@@ -231,14 +265,16 @@ class App {
     this.ui.renderFolders(displayFolders, (name) => {
       this.state.setPath([...this.state.currentPath, name]);
       this.fetchAndRender();
-    }, (path, name) => this.openDeleteModal(path, name));
+    }, (path, name) => this.openRenameModal(path, name), (path, name) => this.openDeleteModal(path, name));
 
     this.ui.renderFiles(displayFiles, {
       onPreview: (file) => this.openPreview(file),
       onDownload: (url, name) => this.downloadFile(url, name),
+      onRename: (path, name) => this.openRenameModal(path, name),
       onStar: (path) => this.state.toggleStar(path),
       onDelete: (path, name) => this.openDeleteModal(path, name),
-      getUrl: (path) => getFileUrl(this.hf.apiBase, path)
+      onHistory: (path, name) => this.openHistory(path, name),
+      getUrl: (path) => getFileUrl(this.hf.apiBase || '/api', path)
     });
 
     this.updateActiveNavItem();
@@ -312,8 +348,7 @@ class App {
     document.getElementById('createFolderModal').classList.remove('active');
     this.ui.showProgress(`Creating folder ${name}...`);
     try {
-      const keepPath = `${destPath}/.gitkeep`;
-      await this.hf.uploadFile(new File([''], '.gitkeep'), keepPath);
+      await this.hf.createFolder(destPath);
       this.ui.showToast(`Folder "${name}" created`, 'success');
       this.fetchAndRender();
     } catch (err) {
@@ -335,12 +370,143 @@ class App {
     document.getElementById('deleteModal').classList.add('active');
   }
 
+  openRenameModal(path, name) {
+    const renameModal = document.getElementById('renameModal');
+    const renameInput = document.getElementById('renameInput');
+    const renameTitle = document.querySelector('#renameModal h3');
+    const isFolder = this.cachedFolders.some(folder => folder.path === path);
+
+    this.pendingRename = {
+      path,
+      originalName: name,
+      itemType: isFolder ? 'folder' : 'file'
+    };
+
+    if (renameTitle) {
+      renameTitle.innerHTML = `<i class="ph-fill ph-pencil-simple" style="color:var(--primary-color)"></i> Rename ${isFolder ? 'Folder' : 'File'}`;
+    }
+
+    if (renameInput) {
+      renameInput.value = name;
+    }
+
+    renameModal.classList.add('active');
+    setTimeout(() => {
+      renameInput.focus();
+      renameInput.select();
+    }, 100);
+  }
+
+  getPreviewUrl(path, asDownload = false) {
+    const baseUrl = getFileUrl(this.hf.apiBase || window.__DOCVAULT_API_BASE__ || '/api', path);
+    return asDownload ? `${baseUrl}?download=true` : baseUrl;
+  }
+
+  previewFallback(name, url, message) {
+    return `
+      <div class="preview-fallback">
+        <i class="ph-fill ph-file"></i>
+        <p>${message}</p>
+        <a href="${url}" target="_blank" rel="noopener noreferrer" class="btn-primary" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;margin-top:16px">
+          <i class="ph-fill ph-download-simple"></i> Open File
+        </a>
+      </div>
+    `;
+  }
+
+  async openPreview(file) {
+    const previewModal = document.getElementById('previewModal');
+    const previewBody = document.getElementById('previewBody');
+    const previewFileName = document.getElementById('previewFileName');
+    const previewUrl = this.getPreviewUrl(file.path);
+
+    this.currentPreviewFile = file;
+    previewFileName.textContent = file.name;
+    previewBody.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Loading preview...</p></div>';
+    previewModal.classList.add('active');
+
+    if (isImage(file.name)) {
+      const img = new Image();
+      img.src = previewUrl;
+      img.className = 'preview-image';
+      img.onload = () => {
+        previewBody.innerHTML = '';
+        previewBody.appendChild(img);
+      };
+      img.onerror = () => {
+        previewBody.innerHTML = this.previewFallback(file.name, previewUrl, 'Image preview is unavailable.');
+      };
+      return;
+    }
+
+    if (isPDF(file.name)) {
+      previewBody.innerHTML = `<iframe class="preview-iframe" src="${previewUrl}" title="${file.name}"></iframe>`;
+      return;
+    }
+
+    if (isText(file.name)) {
+      try {
+        const response = await fetch(previewUrl, { headers: { 'X-User-ID': 'default_user' } });
+        if (!response.ok) throw new Error(`Preview failed: ${response.status}`);
+
+        const pre = document.createElement('pre');
+        pre.className = 'preview-text';
+        pre.textContent = await response.text();
+        previewBody.innerHTML = '';
+        previewBody.appendChild(pre);
+      } catch (err) {
+        previewBody.innerHTML = this.previewFallback(file.name, previewUrl, 'Text preview could not be loaded.');
+      }
+      return;
+    }
+
+    previewBody.innerHTML = this.previewFallback(file.name, previewUrl, 'No inline preview is available for this file type.');
+  }
+
+  downloadFile(url, name) {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+
+  async openHistory(path, name) {
+    this.ui.showHistoryModal(name);
+    try {
+      const history = await this.hf.getHistory(path);
+      this.ui.renderHistory(history, async (revision, asCopy) => {
+        try {
+          const result = await this.hf.restoreVersion(path, revision, asCopy);
+          if (!result.success) throw new Error(result.error || 'Restore failed');
+          this.ui.showToast(result.message || 'Version restored', 'success');
+          this.fetchAndRender();
+        } catch (err) {
+          this.ui.showToast(err.message || 'Restore failed', 'error');
+        }
+      });
+    } catch (err) {
+      this.ui.showToast(err.message || 'Failed to load version history', 'error');
+    }
+  }
+
   async confirmDelete() {
     if (!this.pendingDelete) return;
     const path = this.pendingDelete;
-    this.pendingDelete = null;
-    document.getElementById('deleteModal').classList.remove('active');
-    this.ui.showProgress('Deleting...');
+    const btn = document.getElementById('confirmDeleteBtn');
+    
+    // Check if item still exists in local set to avoid stale deletes
+    const exists = this.state.cachedFiles.some(f => f.path === path) || this.cachedFolders.some(f => f.path === path);
+    if (!exists) {
+      this.ui.showToast('Item no longer exists', 'warning');
+      this.pendingDelete = null;
+      document.getElementById('deleteModal').classList.remove('active');
+      return;
+    }
+
+    if (btn) btn.classList.add('loading');
     try {
       const isFolder = this.cachedFolders.some(f => f.path === path);
       if (isFolder) {
@@ -349,55 +515,68 @@ class App {
         await this.hf.deleteFile(path);
       }
       this.ui.showToast('Deleted successfully', 'success');
+      document.getElementById('deleteModal').classList.remove('active');
+      this.pendingDelete = null;
       this.fetchAndRender();
     } catch (err) {
       this.ui.showToast(err.message || 'Delete failed', 'error');
     } finally {
-      this.ui.hideProgress();
+      if (btn) btn.classList.remove('loading');
     }
   }
 
-  openPreview(file) {
-    this.state.addToRecent(file);
-    const url = getFileUrl(this.hf.apiBase, file.path);
-    const modal = document.getElementById('previewModal');
-    const body = document.getElementById('previewBody');
-    const title = document.getElementById('previewFileName');
-
-    title.textContent = file.name;
-    body.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
-    modal.classList.add('active');
-
-    // Download button
-    document.getElementById('downloadFromPreview').onclick = () => this.downloadFile(url, file.name);
-
-    if (isImage(file.name)) {
-      body.innerHTML = `<img src="${url}" class="preview-image" alt="${file.name}">`;
-    } else if (isPDF(file.name)) {
-      body.innerHTML = `<iframe src="${url}" class="preview-iframe"></iframe>`;
-    } else if (isText(file.name)) {
-      fetch(url).then(r => r.text()).then(text => {
-        body.innerHTML = `<pre class="preview-text">${this.escapeHtml(text)}</pre>`;
-      }).catch(() => {
-        body.innerHTML = '<div class="preview-fallback"><i class="ph-fill ph-file-x"></i><p>Could not load file preview</p></div>';
-      });
-    } else {
-      body.innerHTML = `<div class="preview-fallback"><i class="ph-fill ph-file"></i><p>No preview available</p><a href="${url}" download="${file.name}" class="btn-primary" style="padding: 10px 24px; text-decoration: none; border-radius: 8px; margin-top: 12px;">Download</a></div>`;
+  async renameItem() {
+    if (!this.pendingRename) return;
+    
+    const newNameInput = document.getElementById('renameInput');
+    const btn = document.getElementById('confirmRenameBtn');
+    if (!newNameInput || !btn) return;
+    
+    const newName = newNameInput.value.trim();
+    if (!newName) {
+      this.ui.showToast('Please enter a new name', 'warning');
+      return;
     }
-  }
+    
+    if (newName === this.pendingRename.originalName) {
+      document.getElementById('renameModal').classList.remove('active');
+      this.pendingRename = null;
+      return;
+    }
+    
+    if (!this.isValidName(newName)) {
+      this.ui.showToast('Invalid name format (avoid < > : " / \\ | ? *)', 'error');
+      return;
+    }
 
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  downloadFile(url, name) {
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = name;
-    a.target = '_blank';
-    a.click();
+    // Client-side Conflict Check
+    const isConflict = this.state.cachedFiles.some(f => f.name.toLowerCase() === newName.toLowerCase()) || 
+                      this.cachedFolders.some(f => f.name.toLowerCase() === newName.toLowerCase());
+    
+    if (isConflict) {
+      this.ui.showToast(`An item with name "${newName}" already exists in this folder`, 'warning');
+      return;
+    }
+    
+    const path = this.pendingRename.path;
+    const oldName = this.pendingRename.originalName;
+    
+    btn.classList.add('loading');
+    try {
+      const res = await this.hf.renameItem(path, newName);
+      if (res.success) {
+        this.ui.showToast(`Renamed "${oldName}" to "${newName}"`, 'success');
+        document.getElementById('renameModal').classList.remove('active');
+        this.pendingRename = null;
+        this.fetchAndRender();
+      } else {
+        throw new Error(res.error || 'Rename failed');
+      }
+    } catch (err) {
+      this.ui.showToast(err.message, 'error');
+    } finally {
+      btn.classList.remove('loading');
+    }
   }
 }
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DocVault | Cloud Document Manager</title>
+    <title>DocVault v2.1 | UPDATED</title>
     <meta name="description" content="DocVault — personal document manager powered by Hugging Face Datasets.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,9 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <div style="position:fixed;top:0;left:0;background:red;color:white;z-index:9999;padding:4px 12px;font-weight:bold;font-size:12px;box-shadow:0 2px 8px rgba(0,0,0,0.2);pointer-events:none;">
+      DOCVAULT VERSION 2.1 HARD MARKER (FIXED)
+    </div>
 
     <!-- Hidden file input -->
     <input type="file" id="fileInput" multiple style="display:none">
@@ -34,7 +37,7 @@
         <aside class="sidebar">
             <div class="logo-container">
                 <i class="ph-fill ph-safe logo-icon"></i>
-                <h1 class="logo-text">DocVault</h1>
+                <h1 class="logo-text">DocVault <span style="font-size: 10px; background: var(--primary-light); color: var(--primary-color); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left:8px;">v2.1</span></h1>
             </div>
 
             <div class="new-btn-wrapper">
@@ -82,9 +85,11 @@
             </div>
         </aside>
 
-        <!-- Main -->
         <main class="main-content">
             <header class="top-header">
+                <div class="menu-toggle" id="menuToggle">
+                    <i class="ph-bold ph-list"></i>
+                </div>
                 <div class="search-bar">
                     <i class="ph-bold ph-magnifying-glass"></i>
                     <input type="text" id="searchInput" placeholder="Search files or folders...">
@@ -175,6 +180,7 @@
                     <span id="previewFileName">filename.pdf</span>
                 </div>
                 <div style="display:flex; gap:12px">
+                    <button class="icon-btn" id="renameFromPreview" title="Rename"><i class="ph-bold ph-pencil-simple"></i></button>
                     <button class="icon-btn" id="downloadFromPreview" title="Download"><i class="ph-bold ph-download-simple"></i></button>
                     <button class="close-modal" id="closePreviewModal" style="position:static"><i class="ph-bold ph-x"></i></button>
                 </div>
@@ -185,6 +191,21 @@
         </div>
     </div>
 
-    <script type="module" src="js/main.js?v=2"></script>
+    <!-- Version History Modal -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal glass-panel" style="max-width:500px; width:90%">
+            <button class="close-modal" id="closeHistoryModal"><i class="ph-bold ph-x"></i></button>
+            <h3><i class="ph-fill ph-clock-counter-clockwise" style="color:var(--primary-color)"></i> Version History</h3>
+            <p id="historyFileName" style="margin-bottom:20px; color:var(--text-muted); font-size:14px">filename.pdf</p>
+            <div class="history-list" id="historyList" style="max-height: 400px; overflow-y: auto;">
+                <div class="loading-state-sm"><div class="spinner-sm"></div><p>Fetching history...</p></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.__DOCVAULT_API_BASE__ = 'http://127.0.0.1:7860/api';
+    </script>
+    <script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>
