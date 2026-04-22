@@ -41,3 +41,10 @@ FOLDER_MARKER = ".gitkeep"
 # Logging configuration
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 LOG_LEVEL = "INFO"
+
+# Hugging Face Storage Configuration
+# Set to 'HF' to use Hugging Face Hub, 'LOCAL' for local disk
+STORAGE_MODE = os.getenv('STORAGE_MODE', 'LOCAL')
+HF_TOKEN = os.getenv('HF_TOKEN', '')
+HF_REPO_ID = os.getenv('HF_REPO_ID', 'mohsin-devs/DocVault-Storage')
+HF_REPO_TYPE = os.getenv('HF_REPO_TYPE', 'dataset') # 'dataset' or 'model' (space)
